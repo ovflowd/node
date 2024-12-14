@@ -367,7 +367,7 @@ test-valgrind: all ## Run tests using valgrind.
 test-check-deopts: all
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) --check-deopts parallel sequential
 
-DOCBUILDSTAMP_PREREQS = tools/doc/addon-verify.mjs doc/api/addons.md
+DOCBUILDSTAMP_PREREQS = doc/api/addons.md
 
 ifeq ($(OSTYPE),aix)
 DOCBUILDSTAMP_PREREQS := $(DOCBUILDSTAMP_PREREQS) out/$(BUILDTYPE)/node.exp
@@ -378,14 +378,10 @@ endif
 
 node_use_openssl_and_icu = $(call available-node,"-p" \
 			 "process.versions.openssl != undefined && process.versions.icu != undefined")
-test/addons/.docbuildstamp: $(DOCBUILDSTAMP_PREREQS) tools/doc/node_modules
-	@if [ "$(shell $(node_use_openssl_and_icu))" != "true" ]; then \
-		echo "Skipping .docbuildstamp (no crypto and/or no ICU)"; \
-	else \
-		$(RM) -r test/addons/??_*/; \
-		[ -x $(NODE) ] && $(NODE) $< || node $< ; \
-		[ $$? -eq 0 ] && touch $@; \
-	fi
+test/addons/.docbuildstamp: $(DOCBUILDSTAMP_PREREQS)
+	$(RM) -r test/addons/??_*/; \
+	[ -x $(NODE) ] && $(NODE) $< || node $< ; \
+	[ $$? -eq 0 ] && touch $@; \
 
 # All files that will be included in headers tarball should be listed as deps
 # for generating headers. The list is manually synchronized with install.py.
@@ -749,13 +745,6 @@ apidocs_html = $(addprefix out/,$(apidoc_sources:.md=.html))
 apidocs_json = $(addprefix out/,$(apidoc_sources:.md=.json))
 
 apiassets = $(subst api_assets,api/assets,$(addprefix out/,$(wildcard doc/api_assets/*)))
-
-tools/doc/node_modules: tools/doc/package.json
-	@if [ "$(shell $(node_use_openssl_and_icu))" != "true" ]; then \
-		echo "Skipping tools/doc/node_modules (no crypto and/or no ICU)"; \
-	else \
-		cd tools/doc && $(call available-node,$(run-npm-ci)) \
-	fi
 
 .PHONY: doc-only
 doc-only: tools/doc/node_modules \
@@ -1340,7 +1329,7 @@ else
 LINT_MD_NEWER = -newer tools/.mdlintstamp
 endif
 
-LINT_MD_TARGETS = doc src lib benchmark test tools/doc tools/icu $(wildcard *.md)
+LINT_MD_TARGETS = doc src lib benchmark test tools/icu $(wildcard *.md)
 LINT_MD_FILES = $(shell $(FIND) $(LINT_MD_TARGETS) -type f \
 	! -path '*node_modules*' ! -path 'test/fixtures/*' -name '*.md' \
 	$(LINT_MD_NEWER))
